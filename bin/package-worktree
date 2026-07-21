@@ -17,8 +17,8 @@ Usage: $0 <package> [OPTIONS]
 Create a scratch workspace for inspecting an AUR-backed package.
 
 The workspace contains:
-  upstream/  Raw AUR package at .omarchy/package.json upstream_commit, or HEAD
-  patched/   Raw AUR package with Omarchy .omarchy patches/hooks/pkgrel applied
+  upstream/  Raw AUR package at .eratosthenes/package.json upstream_commit, or HEAD
+  patched/   Raw AUR package with Eratosthenes .eratosthenes patches/hooks/pkgrel applied
   current/   Current checked-in package directory
 
 Options:
@@ -68,7 +68,7 @@ if [[ -z "$PACKAGE" ]]; then
 fi
 
 PACKAGE_DIR="$PKGBUILDS_DIR/$PACKAGE"
-METADATA="$PACKAGE_DIR/.omarchy/package.json"
+METADATA="$PACKAGE_DIR/.eratosthenes/package.json"
 
 if [[ ! -f "$METADATA" ]]; then
   print_error "Missing package metadata: $METADATA"
@@ -84,7 +84,7 @@ AUR_PACKAGE=$(jq -r --arg package "$PACKAGE" '.aur // $package' "$METADATA")
 UPSTREAM_COMMIT=${COMMIT_OVERRIDE:-$(jq -r '.upstream_commit // ""' "$METADATA")}
 
 if [[ -z "$DEST_DIR" ]]; then
-  DEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/omarchy-${PACKAGE}.XXXXXX")
+  DEST_DIR=$(mktemp -d "${TMPDIR:-/tmp}/eratosthenes-${PACKAGE}.XXXXXX")
 else
   mkdir -p "$DEST_DIR"
   DEST_DIR=$(realpath "$DEST_DIR")
@@ -140,9 +140,9 @@ remove_aur_only_files() {
   rm -f "$package_dir/.SRCINFO" "$package_dir/.gitignore"
 }
 
-apply_omarchy_patches() {
+apply_eratosthenes_patches() {
   local package_dir="$1"
-  local patches_dir="$package_dir/.omarchy/patches"
+  local patches_dir="$package_dir/.eratosthenes/patches"
   local applied=false
 
   [[ -d "$patches_dir" ]] || return 1
@@ -168,7 +168,7 @@ apply_omarchy_patches() {
 run_post_sync_hook() {
   local package_dir="$1"
   local aur_pkgrel="$2"
-  local hook="$package_dir/.omarchy/post-sync.sh"
+  local hook="$package_dir/.eratosthenes/post-sync.sh"
 
   [[ -f "$hook" ]] || return 1
 
@@ -178,7 +178,7 @@ run_post_sync_hook() {
     PACKAGE_NAME="$PACKAGE" \
       AUR_PACKAGE_NAME="$AUR_PACKAGE" \
       AUR_PKGREL="$aur_pkgrel" \
-      bash ".omarchy/post-sync.sh"
+      bash ".eratosthenes/post-sync.sh"
   ); then
     print_error "post-sync.sh failed"
     return 2
@@ -189,7 +189,7 @@ apply_pkgrel_metadata() {
   local package_dir="$1"
   local aur_pkgrel="$2"
   local previous_pkgver="$3"
-  local metadata="$package_dir/.omarchy/package.json"
+  local metadata="$package_dir/.eratosthenes/package.json"
 
   jq -e 'has("pkgrel")' "$metadata" >/dev/null || return 1
 
@@ -236,8 +236,8 @@ fi
 rm -rf "$UPSTREAM_DIR/.git"
 
 copy_aur_contents "$UPSTREAM_DIR" "$PATCHED_DIR"
-rm -rf "$PATCHED_DIR/.omarchy"
-cp -a "$PACKAGE_DIR/.omarchy" "$PATCHED_DIR/.omarchy"
+rm -rf "$PATCHED_DIR/.eratosthenes"
+cp -a "$PACKAGE_DIR/.eratosthenes" "$PATCHED_DIR/.eratosthenes"
 cp -a "$PACKAGE_DIR" "$CURRENT_DIR"
 
 AUR_PKGREL=$(get_pkgbuild_field "$UPSTREAM_DIR" pkgrel)
@@ -245,8 +245,8 @@ PREVIOUS_PKGVER=$(get_pkgbuild_field "$PACKAGE_DIR" pkgver || true)
 CUSTOMIZED=false
 PKGREL_APPLIED=false
 
-print_info "Creating patched/ from upstream/ + .omarchy customizations"
-if apply_omarchy_patches "$PATCHED_DIR"; then
+print_info "Creating patched/ from upstream/ + .eratosthenes customizations"
+if apply_eratosthenes_patches "$PATCHED_DIR"; then
   CUSTOMIZED=true
 else
   patch_status=$?
@@ -279,7 +279,7 @@ cat <<EOF
 
 Created package workspace:
   $DEST_DIR/upstream  raw AUR package
-  $DEST_DIR/patched   AUR + Omarchy customizations
+  $DEST_DIR/patched   AUR + Eratosthenes customizations
   $DEST_DIR/current   checked-in package
 
 Useful diffs:

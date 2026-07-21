@@ -6,7 +6,7 @@ set -e
 ARCH=${ARCH:-x86_64}
 MIRROR=${MIRROR:-edge}
 PACKAGE_NAME="$1"
-REPO_DIR="/pkgs.omarchy.org/$MIRROR/$ARCH"
+REPO_DIR="/pkgs.trevorndlovu.com/$MIRROR/$ARCH"
 
 if [[ -z "$PACKAGE_NAME" ]]; then
   echo "ERROR: Package name required"
@@ -33,7 +33,7 @@ echo ""
 
 # Remove from database
 echo "==> Removing from repository database..."
-repo-remove omarchy.db.tar.zst "$PACKAGE_NAME"
+repo-remove eratosthenes.db.tar.zst "$PACKAGE_NAME"
 
 # Remove files
 echo "==> Removing package files..."

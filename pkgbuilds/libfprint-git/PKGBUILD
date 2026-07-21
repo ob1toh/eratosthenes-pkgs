@@ -9,7 +9,7 @@
 # id_table[]; the upstream MR is in flight.
 #
 # Once the patch lands and Arch's libfprint catches up, this package can
-# be removed from the OPR repo and Omarchy can install stock libfprint.
+# be removed from the OPR repo and Eratosthenes can install stock libfprint.
 
 pkgname=libfprint-git
 pkgver=1.94.10.r12.gd79f157

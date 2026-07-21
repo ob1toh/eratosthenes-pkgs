@@ -6,7 +6,7 @@ set -e
 ARCH=${ARCH:-x86_64}
 MIRROR=${MIRROR:-edge}
 OUTPUT_DIR="/output/$MIRROR/$ARCH"
-REPO_NAME="omarchy"
+REPO_NAME="eratosthenes"
 DB_FILE="$OUTPUT_DIR/${REPO_NAME}.db.tar.zst"
 
 cd "$OUTPUT_DIR"

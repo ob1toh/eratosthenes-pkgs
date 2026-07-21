@@ -1,7 +1,7 @@
 _service_name="dell-xps-touchpad-haptics.service"
 _default_level="high"
 _env_path="/etc/dell-xps-touchpad-haptics.env"
-_legacy_env_path="/etc/omarchy-dell-haptic-touchpad.env"
+_legacy_env_path="/etc/eratosthenes-dell-haptic-touchpad.env"
 _legacy_override_dir="/etc/systemd/system/dell-xps-haptic-touchpad.service.d"
 
 _existing_home() {
@@ -121,7 +121,7 @@ _reload_runtime_state() {
 _ensure_user_config() {
   local user=$1
   local home=$2
-  local config_dir="$home/.config/omarchy"
+  local config_dir="$home/.config/eratosthenes"
   local config_path="$config_dir/dell-haptic.conf"
 
   if [[ ! -f $config_path ]] && ! env HOME="$home" USER="$user" LOGNAME="$user" \
@@ -140,8 +140,8 @@ _ensure_user_config() {
 }
 
 _reset_trackpad() {
-  if command -v omarchy-restart-trackpad >/dev/null 2>&1; then
-    omarchy-restart-trackpad 2>/dev/null || true
+  if command -v eratosthenes-restart-trackpad >/dev/null 2>&1; then
+    eratosthenes-restart-trackpad 2>/dev/null || true
   fi
 }
 
@@ -209,7 +209,7 @@ _configure_package() {
       return 1
     fi
   else
-    config_path="$home/.config/omarchy/dell-haptic.conf"
+    config_path="$home/.config/eratosthenes/dell-haptic.conf"
     if [[ ! -f $config_path ]]; then
       echo ":: Could not seed ${config_path} because no desktop user could be identified." >&2
       return 1

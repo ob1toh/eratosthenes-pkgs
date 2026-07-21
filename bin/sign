@@ -82,7 +82,7 @@ docker run --rm --platform linux/amd64 \
   -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
   -v "$BUILD_ROOT/build-output:/build-output" \
   -v "$BUILD_DIR:/build:ro" \
-  omarchy-pkg-builder:latest-x86_64-$MIRROR /build/sign.sh
+  eratosthenes-pkg-builder:latest-x86_64-$MIRROR /build/sign.sh
 
 SIGN_RESULT=$?
 

@@ -1,5 +1,5 @@
 #!/bin/bash
-# Meta command for Omarchy repository management
+# Meta command for Eratosthenes repository management
 # Usage: ./bin/repo <command> [options]
 
 set -e
@@ -49,7 +49,7 @@ show_usage() {
   echo "  release     Run complete workflow: build → sign → promote → clean → update → sync"
   echo "  build       Build packages (unsigned)"
   echo "  sign        Sign all packages in build-output"
-  echo "  promote     Promote build to production (build-output → pkgs.omarchy.org)"
+  echo "  promote     Promote build to production (build-output → pkgs.trevorndlovu.com)"
   echo "  update      Update repository database"
   echo "  clean       Clean old package versions"
   echo "  migrate     Migrate edge packages into stable (no overwrite), then clean + update"
@@ -65,7 +65,7 @@ show_usage() {
   echo "  $0 promote"
   echo "  $0 clean"
   echo "  $0 update"
-  echo "  $0 sync pkgs.omarchy.org/x86_64"
+  echo "  $0 sync pkgs.trevorndlovu.com/x86_64"
   echo ""
   echo "For command-specific help, use:"
   echo "  $0 <command> --help"

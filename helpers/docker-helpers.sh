@@ -1,4 +1,4 @@
-# Docker helper functions for Omarchy package build system
+# Docker helper functions for Eratosthenes package build system
 
 check_docker() {
   if ! command -v docker &>/dev/null; then
@@ -27,7 +27,7 @@ build_docker_image() {
   local arch="${2:-x86_64}"
   local mirror="${3:-edge}"
   local platform=""
-  local image_tag="omarchy-pkg-builder:latest-$arch-$mirror"
+  local image_tag="eratosthenes-pkg-builder:latest-$arch-$mirror"
 
   
   case "$arch" in

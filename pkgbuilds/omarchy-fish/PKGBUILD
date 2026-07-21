@@ -1,15 +1,15 @@
-# Maintainer: Ryan Hughes <ryan@omarchy.org>
+# Maintainer: Ryan Hughes <ryan@eratosthenes>
 
-pkgname=omarchy-fish
+pkgname=eratosthenes-fish
 pkgver=1.5.0
 pkgrel=1
-pkgdesc="Omarchy shell configuration for Fish"
+pkgdesc="Eratosthenes shell configuration for Fish"
 arch=('any')
-url="https://github.com/omacom-io/omarchy-fish"
+url="https://github.com/omacom-io/eratosthenes-fish"
 license=('MIT')
 depends=('fish' 'eza' 'mise' 'zoxide' 'starship' 'fzf' 'fd' 'bat')
 options=('!debug')
-install=omarchy-fish.install
+install=eratosthenes-fish.install
 source=("${pkgname}-${pkgver}.tar.gz::${url}/archive/refs/tags/v${pkgver}.tar.gz"
         "fzf.fish-v10.3.tar.gz::https://github.com/PatrickF1/fzf.fish/archive/refs/tags/v10.3.tar.gz")
 sha256sums=('ccff0564efa04ee30815c2f593af5be1fb89858c7f49443700f4a0b568f51912'
@@ -25,7 +25,7 @@ package() {
   cp "${srcdir}/fzf.fish-10.3/functions/"*.fish "${pkgdir}/usr/share/fish/vendor_functions.d/"
   cp "${srcdir}/fzf.fish-10.3/completions/"*.fish "${pkgdir}/usr/share/fish/vendor_completions.d/"
 
-  # Install omarchy-fish conf.d, functions, and completions.
+  # Install eratosthenes-fish conf.d, functions, and completions.
   # dotglob so leading-dot function names like ....fish are not skipped.
   shopt -s dotglob
   cp conf.d/*.fish "${pkgdir}/usr/share/fish/vendor_conf.d/"
@@ -40,5 +40,5 @@ package() {
   cp "${srcdir}/fzf.fish-10.3/README.md" "${pkgdir}/usr/share/${pkgname}/README.fzf.fish.md"
 
   # Install setup script
-  install -Dm755 bin/omarchy-setup-fish "${pkgdir}/usr/bin/omarchy-setup-fish"
+  install -Dm755 bin/eratosthenes-setup-fish "${pkgdir}/usr/bin/eratosthenes-setup-fish"
 }

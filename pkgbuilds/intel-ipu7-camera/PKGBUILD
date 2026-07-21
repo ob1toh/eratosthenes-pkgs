@@ -1,11 +1,11 @@
-# Maintainer: Omarchy <packages@omarchy.org>
+# Maintainer: Eratosthenes <packages@eratosthenes>
 
 pkgname=intel-ipu7-camera
 pkgver=1.0.3
 pkgrel=4
 pkgdesc="Intel IPU7 MIPI camera stack for Hurrican/Performance (OV08X40 + hardware ISP)"
 arch=('x86_64')
-url="https://github.com/TsaiGaggery/hurrican_omarchy_enabling"
+url="https://github.com/TsaiGaggery/hurrican_eratosthenes_enabling"
 license=('GPL-2.0-or-later')
 depends=(
   'dkms'

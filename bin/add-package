@@ -17,7 +17,7 @@ usage() {
   cat <<EOF
 Usage: $0 <package> [OPTIONS]
 
-Create pkgbuilds/<package> with Omarchy metadata. AUR packages are synced
+Create pkgbuilds/<package> with Eratosthenes metadata. AUR packages are synced
 immediately after metadata is written.
 
 Options:
@@ -28,14 +28,14 @@ Options:
   --fast                     Put package in the fast release ring
   --release-ring <ring>      Release ring (currently: fast)
   --scaffold                 For local packages, create a starter PKGBUILD
-  --force                    Overwrite existing .omarchy/package.json
+  --force                    Overwrite existing .eratosthenes/package.json
   -h, --help                 Show this help message
 
 Examples:
   $0 yay
   $0 spotify --fast
   $0 signal-desktop --no-sync
-  $0 omarchy-zsh --local --scaffold
+  $0 eratosthenes-zsh --local --scaffold
 EOF
 }
 
@@ -109,7 +109,7 @@ case "$RELEASE_RING" in
 esac
 
 PACKAGE_DIR="$PKGBUILDS_DIR/$PACKAGE"
-OMARCHY_DIR="$PACKAGE_DIR/.omarchy"
+OMARCHY_DIR="$PACKAGE_DIR/.eratosthenes"
 METADATA_FILE="$OMARCHY_DIR/package.json"
 
 if [[ -f "$METADATA_FILE" && "$FORCE" != true ]]; then
@@ -166,7 +166,7 @@ pkgver=0.1.0
 pkgrel=1
 pkgdesc=""
 arch=('any')
-url="https://omarchy.org"
+url="https://eratosthenes"
 license=('MIT')
 
 package() {

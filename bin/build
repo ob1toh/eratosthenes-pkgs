@@ -9,7 +9,7 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
 source "$BUILD_ROOT/helpers/docker-helpers.sh"
 source "$BUILD_ROOT/helpers/paths.sh"
 
-print_header "Omarchy Package Builder"
+print_header "Eratosthenes Package Builder"
 
 DRY_RUN=false
 
@@ -53,7 +53,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --dry-run           Show what would build without running makepkg"
     echo "  -h, --help           Show this help message"
     echo ""
-    echo "This script builds packages from pkgbuilds/ based on .omarchy/package.json:"
+    echo "This script builds packages from pkgbuilds/ based on .eratosthenes/package.json:"
     echo "  --mirror edge:   builds all packages"
     echo "  --mirror stable: builds packages with release_ring=fast only"
     echo ""
@@ -143,14 +143,14 @@ DOCKER_ARGS=(
   -e MIRROR="$MIRROR"
   -e PACKAGES="$PACKAGES"
   -v "$BUILD_ROOT/build-output:/build-output"
-  -v "$BUILD_ROOT/pkgs.omarchy.org:/pkgs.omarchy.org"
+  -v "$BUILD_ROOT/pkgs.trevorndlovu.com:/pkgs.trevorndlovu.com"
   -v "$BUILD_DIR:/build:ro"
   -v "$BUILD_ROOT/helpers:/helpers:ro"
   -v "$BUILD_ROOT/pkgbuilds:/pkgbuilds:ro"
 )
 
 # Run the builder with assembled args
-IMAGE_TAG="omarchy-pkg-builder:latest-$ARCH-$MIRROR"
+IMAGE_TAG="eratosthenes-pkg-builder:latest-$ARCH-$MIRROR"
 PLATFORM_ARG=$(get_platform_arg "$ARCH")
 
 docker run $PLATFORM_ARG "${DOCKER_ARGS[@]}" "$IMAGE_TAG" /build/build.sh

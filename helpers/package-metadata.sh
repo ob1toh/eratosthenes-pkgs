@@ -1,7 +1,7 @@
-# Package metadata helpers for Omarchy package build tooling
+# Package metadata helpers for Eratosthenes package build tooling
 #
 # Expects package directories in $PKGBUILDS_DIR, each with:
-#   .omarchy/package.json
+#   .eratosthenes/package.json
 #
 # Minimal schema:
 #   { "source": "aur" }
@@ -25,7 +25,7 @@ fi
 
 metadata_file_for_dir() {
   local pkgdir="$1"
-  echo "$pkgdir/.omarchy/package.json"
+  echo "$pkgdir/.eratosthenes/package.json"
 }
 
 package_dir_for_name() {

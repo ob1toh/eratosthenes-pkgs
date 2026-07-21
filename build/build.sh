@@ -8,7 +8,7 @@ MIRROR=${MIRROR:-edge}
 DRY_RUN=${DRY_RUN:-false}
 PKGBUILDS_DIR=${PKGBUILDS_DIR:-/pkgbuilds}
 BUILD_OUTPUT_DIR=${BUILD_OUTPUT_DIR:-/build-output/$MIRROR/$ARCH}
-FINAL_OUTPUT_DIR=${FINAL_OUTPUT_DIR:-/pkgs.omarchy.org/$MIRROR/$ARCH}
+FINAL_OUTPUT_DIR=${FINAL_OUTPUT_DIR:-/pkgs.trevorndlovu.com/$MIRROR/$ARCH}
 HELPERS_DIR=${HELPERS_DIR:-/helpers}
 SRC_DIR=${SRC_DIR:-/src}
 
@@ -20,43 +20,43 @@ if [[ "$DRY_RUN" != true ]]; then
 
   mkdir -p "$BUILD_OUTPUT_DIR" "$FINAL_OUTPUT_DIR"
 
-  # Configure Omarchy repositories for dependency resolution
-  echo "==> Configuring Omarchy repositories for dependency resolution..."
+  # Configure Eratosthenes repositories for dependency resolution
+  echo "==> Configuring Eratosthenes repositories for dependency resolution..."
 
-  # Always add omarchy-build repo (for incremental builds)
+  # Always add eratosthenes-build repo (for incremental builds)
   # Packages in build-output are unsigned, so use SigLevel = Never
   sudo tee -a /etc/pacman.conf > /dev/null <<EOF
 
-[omarchy-build]
+[eratosthenes-build]
 SigLevel = Never
 Server = file://$BUILD_OUTPUT_DIR
 EOF
-  echo "  -> omarchy-build (priority 1): $BUILD_OUTPUT_DIR"
+  echo "  -> eratosthenes-build (priority 1): $BUILD_OUTPUT_DIR"
 
   # Initialize empty build database if it doesn't exist
   cd "$BUILD_OUTPUT_DIR"
-  if [[ ! -f "omarchy-build.db.tar.zst" ]]; then
+  if [[ ! -f "eratosthenes-build.db.tar.zst" ]]; then
     # Create an empty database
-    repo-add omarchy-build.db.tar.zst >/dev/null 2>&1
-    ln -sf omarchy-build.db.tar.zst omarchy-build.db
+    repo-add eratosthenes-build.db.tar.zst >/dev/null 2>&1
+    ln -sf eratosthenes-build.db.tar.zst eratosthenes-build.db
   else
     # Database exists, check if we need to rebuild it from packages
-    if ls *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'omarchy-build\.db' | grep -q .; then
+    if ls *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'eratosthenes-build\.db' | grep -q .; then
       echo "==> Rebuilding build database from existing packages..."
-      ls *.pkg.tar.* | grep -v '\.sig$' | grep -v 'omarchy-build\.db' | xargs -r repo-add omarchy-build.db.tar.zst >/dev/null 2>&1
-      ln -sf omarchy-build.db.tar.zst omarchy-build.db
+      ls *.pkg.tar.* | grep -v '\.sig$' | grep -v 'eratosthenes-build\.db' | xargs -r repo-add eratosthenes-build.db.tar.zst >/dev/null 2>&1
+      ln -sf eratosthenes-build.db.tar.zst eratosthenes-build.db
     fi
   fi
 
-  # Add omarchy repo if it has a database (stable packages)
-  if [[ -f "$FINAL_OUTPUT_DIR/omarchy.db.tar.zst" ]] || [[ -f "$FINAL_OUTPUT_DIR/omarchy.db" ]]; then
+  # Add eratosthenes repo if it has a database (stable packages)
+  if [[ -f "$FINAL_OUTPUT_DIR/eratosthenes.db.tar.zst" ]] || [[ -f "$FINAL_OUTPUT_DIR/eratosthenes.db" ]]; then
     sudo tee -a /etc/pacman.conf > /dev/null <<EOF
 
-[omarchy]
+[eratosthenes]
 SigLevel = Optional TrustAll
 Server = file://$FINAL_OUTPUT_DIR
 EOF
-    echo "  -> omarchy (priority 2): $FINAL_OUTPUT_DIR"
+    echo "  -> eratosthenes (priority 2): $FINAL_OUTPUT_DIR"
   fi
 
   # Sync pacman database
@@ -96,10 +96,10 @@ LOCAL_VERSION_CACHE_LOADED=false
 LOCAL_VERSION_CACHE_DB=""
 
 load_local_versions() {
-  local db="$FINAL_OUTPUT_DIR/omarchy.db.tar.zst"
+  local db="$FINAL_OUTPUT_DIR/eratosthenes.db.tar.zst"
 
   if [[ ! -f "$db" ]]; then
-    db="$FINAL_OUTPUT_DIR/omarchy.db"
+    db="$FINAL_OUTPUT_DIR/eratosthenes.db"
   fi
 
   [[ -f "$db" ]] || return 0
@@ -232,11 +232,11 @@ build_package() {
     cd "$BUILD_OUTPUT_DIR"
 
     # Find ALL package files (handles split packages)
-    local new_pkgs=($(ls -t ${pkg}-*.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'omarchy-build\.db'))
+    local new_pkgs=($(ls -t ${pkg}-*.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'eratosthenes-build\.db'))
 
     if [[ ${#new_pkgs[@]} -gt 0 ]]; then
-      repo-add omarchy-build.db.tar.zst "${new_pkgs[@]}" >/dev/null 2>&1
-      ln -sf omarchy-build.db.tar.zst omarchy-build.db
+      repo-add eratosthenes-build.db.tar.zst "${new_pkgs[@]}" >/dev/null 2>&1
+      ln -sf eratosthenes-build.db.tar.zst eratosthenes-build.db
       sudo pacman -Sy >/dev/null 2>&1
     fi
 

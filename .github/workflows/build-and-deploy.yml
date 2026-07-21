@@ -1,0 +1,172 @@
+name: Build and Deploy Packages
+
+on:
+  push:
+    branches: [master]
+    paths: ['pkgbuilds/**']
+  schedule:
+    # Full rebuild every Sunday at 02:00 UTC
+    - cron: '0 2 * * 0'
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Packages to build (space-separated; empty = changed on push, all on schedule)'
+        required: false
+      mirror:
+        description: 'Target mirror'
+        type: choice
+        options: [edge, stable, rc]
+        default: edge
+      full_rebuild:
+        description: 'Rebuild all packages (ignore skip-if-built logic)'
+        type: boolean
+        default: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Determine packages and mirror
+        id: plan
+        run: |
+          MIRROR="${{ inputs.mirror || 'edge' }}"
+          echo "mirror=$MIRROR" >> "$GITHUB_OUTPUT"
+
+          if [[ -n "${{ inputs.packages }}" ]]; then
+            PKGS="${{ inputs.packages }}"
+          elif [[ "${{ github.event_name }}" == "schedule" || "${{ inputs.full_rebuild }}" == "true" ]]; then
+            PKGS=$(ls pkgbuilds/ | tr '\n' ' ')
+          else
+            PKGS=$(git diff --name-only HEAD~1 HEAD -- pkgbuilds/ | cut -d/ -f2 | sort -u | tr '\n' ' ')
+          fi
+
+          echo "packages=$PKGS" >> "$GITHUB_OUTPUT"
+          echo "==> Mirror: $MIRROR"
+          echo "==> Packages: ${PKGS:-<none changed>}"
+
+      - name: Skip if nothing to build
+        if: steps.plan.outputs.packages == ''
+        run: |
+          echo "No pkgbuilds changed — skipping build."
+          exit 0
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Build Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: build/Dockerfile
+          load: true
+          tags: eratosthenes-builder:latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Build packages
+        run: |
+          MIRROR=${{ steps.plan.outputs.mirror }}
+          mkdir -p build-output/$MIRROR/x86_64
+
+          docker run --rm \
+            -e MIRROR="$MIRROR" \
+            -e PACKAGES="${{ steps.plan.outputs.packages }}" \
+            -e ARCH=x86_64 \
+            -e DRY_RUN=false \
+            -v "$PWD/pkgbuilds:/pkgbuilds:ro" \
+            -v "$PWD/build:/build:ro" \
+            -v "$PWD/helpers:/helpers:ro" \
+            -v "$PWD/build-output:/build-output" \
+            eratosthenes-builder:latest \
+            /build/build.sh
+
+      - name: Sign packages
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          docker run --rm \
+            -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
+            -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
+            -e MIRROR="${{ steps.plan.outputs.mirror }}" \
+            -v "$PWD/build-output:/build-output" \
+            -v "$PWD/build:/build:ro" \
+            eratosthenes-builder:latest \
+            /build/sign.sh
+
+      - name: Download existing DB from R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          MIRROR=${{ steps.plan.outputs.mirror }}
+          OUTDIR="build-output/$MIRROR/x86_64"
+          # Pull existing DB so repo-add can do an incremental update.
+          # Failures are non-fatal — first deploy starts with a fresh DB.
+          aws s3 cp "s3://$R2_BUCKET/$MIRROR/x86_64/eratosthenes.db.tar.zst" "$OUTDIR/" \
+            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || true
+          aws s3 cp "s3://$R2_BUCKET/$MIRROR/x86_64/eratosthenes.files.tar.zst" "$OUTDIR/" \
+            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || true
+
+      - name: Update repository database
+        run: |
+          MIRROR=${{ steps.plan.outputs.mirror }}
+          OUTDIR="build-output/$MIRROR/x86_64"
+
+          docker run --rm \
+            -e MIRROR="$MIRROR" \
+            -v "$PWD/$OUTDIR:/output/$MIRROR/x86_64" \
+            -v "$PWD/build:/build:ro" \
+            eratosthenes-builder:latest \
+            /build/update-repo.sh
+
+      - name: Sign repository database
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+        run: |
+          MIRROR=${{ steps.plan.outputs.mirror }}
+          OUTDIR="build-output/$MIRROR/x86_64"
+
+          # Sign the db and files tarballs
+          docker run --rm \
+            -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
+            -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
+            -v "$PWD/$OUTDIR:/sign-target" \
+            eratosthenes-builder:latest bash -c '
+              echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>/dev/null
+              KEY_ID=$(gpg --list-secret-keys --keyid-format LONG 2>/dev/null | grep "sec" | head -1 | awk "{print \$2}" | cut -d"/" -f2)
+              cd /sign-target
+              for f in eratosthenes.db.tar.zst eratosthenes.files.tar.zst; do
+                [[ -f "$f" ]] || continue
+                rm -f "$f.sig"
+                gpg --batch --yes --pinentry-mode loopback --passphrase "$GPG_PASSPHRASE" \
+                  --detach-sign --use-agent --no-armor --local-user "$KEY_ID" "$f"
+              done
+            '
+
+      - name: Upload to R2
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          MIRROR=${{ steps.plan.outputs.mirror }}
+          aws s3 sync "build-output/$MIRROR/x86_64/" \
+            "s3://$R2_BUCKET/$MIRROR/x86_64/" \
+            --endpoint-url "$R2_ENDPOINT"
+          echo "==> Deployed to $MIRROR channel"
+
+      - name: Notify on failure
+        if: failure()
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          echo "Build failed. Check the logs: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"

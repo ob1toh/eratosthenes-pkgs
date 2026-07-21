@@ -6,7 +6,7 @@ source "$BUILD_ROOT/helpers/message-helpers.sh"
 source "$BUILD_ROOT/helpers/paths.sh"
 
 # Default remote (production)
-DEFAULT_REMOTE="pkgs.omarchy.org:omarchy-pkgs"
+DEFAULT_REMOTE="pkgs.trevorndlovu.com:eratosthenes-pkgs"
 REMOTE="$DEFAULT_REMOTE"
 SKIP_PROD_CHECK=false
 
@@ -84,15 +84,15 @@ print_info "Syncing to: $REMOTE/$DESTINATION_DIRECTORY"
 # Use --ignore-existing to not overwrite different versions already on remote
 print_info "Syncing packages..."
 rclone sync "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
-  --exclude "omarchy.db*" \
-  --exclude "omarchy.files*" \
+  --exclude "eratosthenes.db*" \
+  --exclude "eratosthenes.files*" \
   --ignore-existing \
   --copy-links --delete-after -v
 
 # Then sync database files last to ensure repository integrity
 print_info "Updating repository database..."
 rclone copy "$REPO_DIR" "$REMOTE/$DESTINATION_DIRECTORY" \
-  --include "omarchy.*" \
+  --include "eratosthenes.*" \
   --checksum --copy-links -v
 
 print_success "Sync complete!"

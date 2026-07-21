@@ -6,10 +6,10 @@ post_install() {
     echo "   omazed setup"
     echo ""
     echo "   This will:"
-    echo "   • Set up omarchy hook integration (or systemd fallback)"
+    echo "   • Set up eratosthenes hook integration (or systemd fallback)"
     echo "   • Set the Zed theme once on first run"
     echo ""
-    echo "Then change your Omarchy theme and watch Zed follow along!"
+    echo "Then change your Eratosthenes theme and watch Zed follow along!"
     echo ""
 }
 
@@ -25,7 +25,7 @@ post_upgrade() {
     echo ""
     echo "   This will:"
     echo "   • Set the Zed theme once on first run"
-    echo "   • Migrate to omarchy hooks automatically"
+    echo "   • Migrate to eratosthenes hooks automatically"
     echo ""
     echo "If your wish to remove the old bundled themes then run:"
     echo "rm -f ~/.config/zed/themes/{catppuccin,catppuccin-latte,everforest,flexoki-light,gruvbox,kanagawa,matte-black,nord,osaka-jade,ristretto,rose-pine,tokyo-night,ethereal,hackerman}.json"

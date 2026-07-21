@@ -1,5 +1,5 @@
 #!/bin/bash
-# Promote packages from build-output to pkgs.omarchy.org
+# Promote packages from build-output to pkgs.trevorndlovu.com
 
 set -e
 
@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --dry-run          Show what would be copied without copying"
     echo "  -h, --help         Show this help message"
     echo ""
-    echo "This script promotes packages from build-output/ to pkgs.omarchy.org/"
+    echo "This script promotes packages from build-output/ to pkgs.trevorndlovu.com/"
     exit 0
     ;;
   *)
@@ -59,7 +59,7 @@ fi
 
 # Count packages in build output
 cd "$BUILD_OUTPUT_DIR"
-PACKAGE_COUNT=$(ls -1 *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'omarchy-build\.db' | wc -l)
+PACKAGE_COUNT=$(ls -1 *.pkg.tar.* 2>/dev/null | grep -v '\.sig$' | grep -v 'eratosthenes-build\.db' | wc -l)
 
 if [[ $PACKAGE_COUNT -eq 0 ]]; then
   print_warning "No packages found in build output"
@@ -72,7 +72,7 @@ if [[ "$DRY_RUN" == true ]]; then
   print_warning "DRY RUN MODE - No files will be copied"
   echo ""
   print_info "Packages that would be promoted:"
-  ls -1 *.pkg.tar.* 2>/dev/null | grep -v 'omarchy-build\.db' | grep -v 'omarchy-build\.files' | while read -r pkg; do
+  ls -1 *.pkg.tar.* 2>/dev/null | grep -v 'eratosthenes-build\.db' | grep -v 'eratosthenes-build\.files' | while read -r pkg; do
     echo "  - $pkg"
   done
 else
@@ -83,8 +83,8 @@ else
   MISSING_SIGS=()
   for pkg_file in *.pkg.tar.*; do
     # Skip build database files
-    [[ "$pkg_file" == omarchy-build.db* ]] && continue
-    [[ "$pkg_file" == omarchy-build.files* ]] && continue
+    [[ "$pkg_file" == eratosthenes-build.db* ]] && continue
+    [[ "$pkg_file" == eratosthenes-build.files* ]] && continue
     # Skip signature files themselves
     [[ "$pkg_file" == *.sig ]] && continue
     [[ ! -f "$pkg_file" ]] && continue
@@ -113,8 +113,8 @@ else
   CONFLICTS=()
   for pkg_file in *.pkg.tar.*; do
     # Skip build database files
-    [[ "$pkg_file" == omarchy-build.db* ]] && continue
-    [[ "$pkg_file" == omarchy-build.files* ]] && continue
+    [[ "$pkg_file" == eratosthenes-build.db* ]] && continue
+    [[ "$pkg_file" == eratosthenes-build.files* ]] && continue
     [[ ! -f "$pkg_file" ]] && continue
 
     if [[ -f "$REPO_DIR/$pkg_file" ]]; then
@@ -129,7 +129,7 @@ else
       echo "  - $conflict"
     done
     echo ""
-    print_error "Packages already exist in pkgs.omarchy.org!"
+    print_error "Packages already exist in pkgs.trevorndlovu.com!"
     exit 1
   fi
 
@@ -138,8 +138,8 @@ else
   MOVED=0
   for pkg_file in *.pkg.tar.*; do
     # Skip build database files
-    [[ "$pkg_file" == omarchy-build.db* ]] && continue
-    [[ "$pkg_file" == omarchy-build.files* ]] && continue
+    [[ "$pkg_file" == eratosthenes-build.db* ]] && continue
+    [[ "$pkg_file" == eratosthenes-build.files* ]] && continue
     [[ ! -f "$pkg_file" ]] && continue
 
     # Use mv to prevent race condition caused by cp
@@ -152,10 +152,10 @@ else
   done
 
   echo ""
-  print_success "Promoted $MOVED file(s) to pkgs.omarchy.org"
+  print_success "Promoted $MOVED file(s) to pkgs.trevorndlovu.com"
 
   print_info "Cleaning up build directory..."
   cd "$BUILD_OUTPUT_DIR"
-  rm -f *.pkg.tar.* omarchy-build.db* omarchy-build.files*
+  rm -f *.pkg.tar.* eratosthenes-build.db* eratosthenes-build.files*
   print_success "Build directory cleaned"
 fi

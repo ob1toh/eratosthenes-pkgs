@@ -18,7 +18,7 @@ usage() {
   cat <<EOF
 Usage: $0 [OPTIONS]
 
-List package source metadata from pkgbuilds/<package>/.omarchy/package.json.
+List package source metadata from pkgbuilds/<package>/.eratosthenes/package.json.
 
 Options:
   --json                     Output JSON for agents/scripts
@@ -83,7 +83,7 @@ while [[ $# -gt 0 ]]; do
 done
 
 list_repo_packages() {
-  local db_file="$REPO_DIR/omarchy.db.tar.zst"
+  local db_file="$REPO_DIR/eratosthenes.db.tar.zst"
 
   if [[ ! -f "$db_file" ]]; then
     echo "Repository database not found: $db_file" >&2
@@ -106,7 +106,7 @@ get_pkgbuild_version() {
 
 patch_count() {
   local pkgdir="$1"
-  local patches_dir="$pkgdir/.omarchy/patches"
+  local patches_dir="$pkgdir/.eratosthenes/patches"
 
   [[ -d "$patches_dir" ]] || { echo 0; return; }
   find "$patches_dir" -maxdepth 1 -type f -name '*.patch' | wc -l
@@ -115,7 +115,7 @@ patch_count() {
 post_sync_hook_enabled() {
   local pkgdir="$1"
 
-  [[ -f "$pkgdir/.omarchy/post-sync.sh" ]] && echo true || echo false
+  [[ -f "$pkgdir/.eratosthenes/post-sync.sh" ]] && echo true || echo false
 }
 
 package_matches_filters() {

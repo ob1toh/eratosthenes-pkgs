@@ -1,5 +1,5 @@
 # ==============================================================================
-# Omarchy Package Builder - Multi-Architecture
+# Eratosthenes Package Builder - Multi-Architecture
 # Supports: x86_64 (Arch Linux) and aarch64 (Arch Linux ARM)
 # ==============================================================================
 
@@ -38,9 +38,9 @@ RUN mkdir -p /etc/pacman.d && \
 
 RUN if [ "${TARGETARCH}" = "amd64" ]; then \
         if [ "${MIRROR}" = "stable" ]; then \
-            printf 'Server = https://stable-mirror.omarchy.org/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist; \
+            printf 'Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist; \
         else \
-            printf 'Server = https://mirror.omarchy.org/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist; \
+            printf 'Server = https://geo.mirror.pkgbuild.com/$repo/os/$arch\n' > /etc/pacman.d/mirrorlist; \
         fi; \
     else \
         curl -L "https://raw.githubusercontent.com/archlinuxarm/PKGBUILDs/master/core/pacman-mirrorlist/mirrorlist" 2>/dev/null | \
@@ -103,15 +103,15 @@ RUN ln -sf /usr/lib/os-release /etc/os-release && \
         pacman-key --populate archlinux; \
     fi
 
-# Setup Omarchy keyring manually before adding repo (avoids keyserver trust issues)
+# Setup Eratosthenes keyring manually before adding repo (avoids keyserver trust issues)
 # Note: Repository is removed at the end since build scripts add it dynamically
 RUN pacman-key --recv-keys 40DFB630FF42BCFFB047046CF0134EE680CAC571 --keyserver keys.openpgp.org && \
     pacman-key --lsign-key 40DFB630FF42BCFFB047046CF0134EE680CAC571 && \
-    printf '\n[omarchy]\nSigLevel = Optional\nServer = https://pkgs.omarchy.org/$arch\n' >> /etc/pacman.conf && \
+    printf '\n[eratosthenes]\nSigLevel = Optional\nServer = https://pkgs.trevorndlovu.com/$arch\n' >> /etc/pacman.conf && \
     pacman -Sy --noconfirm && \
-    pacman -S --noconfirm omarchy-keyring && \
-    pacman-key --populate omarchy && \
-    sed -i '/^\[omarchy\]/,/^$/d' /etc/pacman.conf
+    pacman -S --noconfirm eratosthenes-keyring && \
+    pacman-key --populate eratosthenes && \
+    sed -i '/^\[eratosthenes\]/,/^$/d' /etc/pacman.conf
 
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
@@ -148,7 +148,7 @@ WORKDIR /src
 
 CMD ["/bin/bash"]
 
-LABEL maintainer="Omarchy <https://omarchy.org>"
+LABEL maintainer="Eratosthenes <https://github.com/ob1toh/eratosthenes>"
 LABEL description="Multi-architecture Arch Linux package build environment"
 LABEL version="2.0"
 LABEL architectures="x86_64,aarch64"

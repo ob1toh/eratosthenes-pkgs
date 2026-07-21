@@ -1,19 +1,19 @@
-# Omarchy Package Repository
+# Eratosthenes Package Repository
 
-Build system for the Omarchy Package Repository. Builds PKGBUILDs from local sources and AUR, signs them, and syncs to production.
+Build system for the Eratosthenes Package Repository. Builds PKGBUILDs from local sources and AUR, signs them, and syncs to production.
 
 **Multi-Architecture**: Supports both x86_64 and aarch64 (ARM64).
 
 ## PKGBUILDs
 
-Each package lives directly under `pkgbuilds/<package>/` and carries Omarchy metadata in `.omarchy/package.json`.
+Each package lives directly under `pkgbuilds/<package>/` and carries Eratosthenes metadata in `.eratosthenes/package.json`.
 
 The filesystem no longer encodes release policy. Instead:
 
 - all packages build for `edge`
 - packages with `"release_ring": "fast"` also build directly for `stable`
 - all other packages reach `stable` by promoting tested edge artifacts with `bin/repo migrate`
-- AUR sync behavior is controlled by `source`, `sync`, `aur`, patches, and hooks in `.omarchy/`
+- AUR sync behavior is controlled by `source`, `sync`, `aur`, patches, and hooks in `.eratosthenes/`
 
 ## Prerequisites
 ### aarch64 Builds (Optional)
@@ -57,7 +57,7 @@ bin/repo release --mirror stable
 bin/repo release --arch aarch64
 
 # Force build specific package (useful for debugging failures)
-bin/repo release --package omarchy-nvim
+bin/repo release --package eratosthenes-nvim
 
 # Show what would build without signing/promoting/syncing
 bin/repo release --dry-run
@@ -113,7 +113,7 @@ bin/repo promote --arch aarch64     # ARM64
 bin/repo promote --dry-run          # Preview
 ```
 
-Copies signed packages from `build-output/` → `pkgs.omarchy.org/`.
+Copies signed packages from `build-output/` → `pkgs.trevorndlovu.com/`.
 
 ### Clean
 
@@ -151,7 +151,7 @@ bin/sync-aur                            # Sync all AUR packages with sync enable
 bin/sync-aur yay v4l2-relayd            # Sync specific packages
 ```
 
-AUR sync is metadata-driven. It preserves `.omarchy/`, replaces the package root with AUR contents, applies `.omarchy/patches/*.patch`, runs `.omarchy/post-sync.sh` when present, applies pkgrel metadata, removes AUR-only `.SRCINFO` and `.gitignore` files, and records `upstream_commit`.
+AUR sync is metadata-driven. It preserves `.eratosthenes/`, replaces the package root with AUR contents, applies `.eratosthenes/patches/*.patch`, runs `.eratosthenes/post-sync.sh` when present, applies pkgrel metadata, removes AUR-only `.SRCINFO` and `.gitignore` files, and records `upstream_commit`.
 
 ### Other
 
@@ -183,13 +183,13 @@ bin/package-worktree v4l2-relayd     # Create upstream/patched/current scratch w
 ## Directory Structure
 
 ```
-omarchy-pkgs/
+eratosthenes-pkgs/
 ├── pkgbuilds/                  # Source PKGBUILDs
 │   └── package-name/
 │       ├── PKGBUILD
-│       └── .omarchy/
+│       └── .eratosthenes/
 │           ├── package.json    # Source/sync/release metadata
-│           ├── patches/        # Omarchy patches reapplied after AUR sync
+│           ├── patches/        # Eratosthenes patches reapplied after AUR sync
 │           └── post-sync.sh    # Optional dynamic post-sync customization hook
 ├── build/
 ├── build-output/               # Unsigned packages (temporary)
@@ -199,7 +199,7 @@ omarchy-pkgs/
 │   └── stable/
 │       ├── x86_64/
 │       └── aarch64/
-├── pkgs.omarchy.org/           # Signed packages (production)
+├── pkgs.trevorndlovu.com/           # Signed packages (production)
 │   ├── edge/
 │   │   ├── x86_64/
 │   │   └── aarch64/
@@ -211,7 +211,7 @@ omarchy-pkgs/
 
 ## Package Metadata
 
-Each source package has Omarchy metadata at `pkgbuilds/<package>/.omarchy/package.json`.
+Each source package has Eratosthenes metadata at `pkgbuilds/<package>/.eratosthenes/package.json`.
 
 Minimal examples:
 
@@ -238,11 +238,11 @@ Minimal examples:
 Fields:
 
 - `source`: `aur` or `local`
-- `sync`: optional for AUR packages; defaults to `true`. Set `false` for AUR-origin packages that Omarchy maintains manually.
+- `sync`: optional for AUR packages; defaults to `true`. Set `false` for AUR-origin packages that Eratosthenes maintains manually.
 - `aur`: optional AUR package name when it differs from the local package directory, usually for split packages.
 - `release_ring`: optional. `fast` means the package is built directly for stable as well as edge. Packages without a ring build in edge and reach stable through tested artifact promotion (`bin/repo migrate`).
-- `pkgrel`: optional Omarchy pkgrel suffix for a version-pinned rebuild bump. This emits `<aur pkgrel>.<suffix>` instead of replacing AUR's pkgrel. `offset` can be used only when preserving monotonic upgrades from old absolute pkgrel bumps. The metadata is removed automatically when AUR sync changes `pkgver`; the current package version is read from the checked-in PKGBUILD, so the version is not duplicated in JSON.
-- `upstream_commit`: set by `bin/sync-aur` for AUR packages. Used by `bin/package-worktree` to recreate the exact raw AUR package that Omarchy last synced.
+- `pkgrel`: optional Eratosthenes pkgrel suffix for a version-pinned rebuild bump. This emits `<aur pkgrel>.<suffix>` instead of replacing AUR's pkgrel. `offset` can be used only when preserving monotonic upgrades from old absolute pkgrel bumps. The metadata is removed automatically when AUR sync changes `pkgver`; the current package version is read from the checked-in PKGBUILD, so the version is not duplicated in JSON.
+- `upstream_commit`: set by `bin/sync-aur` for AUR packages. Used by `bin/package-worktree` to recreate the exact raw AUR package that Eratosthenes last synced.
 
 ### Build Matrix
 
@@ -267,7 +267,7 @@ bin/repo release --package package-name
 bin/repo release --mirror stable --package package-name
 ```
 
-### AUR-origin, manually maintained by Omarchy
+### AUR-origin, manually maintained by Eratosthenes
 
 ```bash
 bin/add-package package-name --no-sync
@@ -275,7 +275,7 @@ bin/add-package package-name --no-sync
 
 ### Local Customizations for AUR Packages
 
-For static changes, create `pkgbuilds/package-name/.omarchy/patches/*.patch` to maintain modifications across AUR syncs.
+For static changes, create `pkgbuilds/package-name/.eratosthenes/patches/*.patch` to maintain modifications across AUR syncs.
 
 The recommended workflow is to use a scratch workspace:
 
@@ -287,7 +287,7 @@ This creates:
 
 ```text
 upstream/  # raw AUR package at upstream_commit
-patched/   # AUR + existing Omarchy .omarchy customizations
+patched/   # AUR + existing Eratosthenes .eratosthenes customizations
 current/   # current checked-in package directory
 ```
 
@@ -304,20 +304,20 @@ bin/package-worktree package-name --dir /tmp/package-name-worktree
 diff -ruN /tmp/package-name-worktree/patched /tmp/package-name-worktree/current
 
 # For a single PKGBUILD change, write a patch like this:
-mkdir -p pkgbuilds/package-name/.omarchy/patches
+mkdir -p pkgbuilds/package-name/.eratosthenes/patches
 (
   cd /tmp/package-name-worktree/patched
   diff -u --label a/PKGBUILD --label b/PKGBUILD \
     PKGBUILD /tmp/package-name-worktree/current/PKGBUILD || true
-) > pkgbuilds/package-name/.omarchy/patches/my-fix.patch
+) > pkgbuilds/package-name/.eratosthenes/patches/my-fix.patch
 
-# 4. Verify the package is reproducible from AUR + .omarchy
+# 4. Verify the package is reproducible from AUR + .eratosthenes
 bin/sync-aur package-name
 bin/package-worktree package-name --dir /tmp/package-name-check
 diff -ruN /tmp/package-name-check/patched /tmp/package-name-check/current
 ```
 
-For dynamic changes that depend on the current upstream version, add `pkgbuilds/package-name/.omarchy/post-sync.sh`. The hook runs after the AUR package is copied into a temporary worktree and before the Omarchy pkgrel suffix is applied. After patches/hooks/metadata pkgrel overrides, `bin/sync-aur` removes AUR-only `.SRCINFO` and `.gitignore` files before writing the package back.
+For dynamic changes that depend on the current upstream version, add `pkgbuilds/package-name/.eratosthenes/post-sync.sh`. The hook runs after the AUR package is copied into a temporary worktree and before the Eratosthenes pkgrel suffix is applied. After patches/hooks/metadata pkgrel overrides, `bin/sync-aur` removes AUR-only `.SRCINFO` and `.gitignore` files before writing the package back.
 
 ### Custom Package
 
@@ -331,7 +331,7 @@ bin/repo release --package my-package
 
 ### x86_64
 - Native builds (fast)
-- Mirrors: mirror.omarchy.org, rackspace, pkgbuild.com
+- Mirrors: geo.mirror.pkgbuild.com, rackspace, pkgbuild.com
 
 ### aarch64
 - QEMU emulation required on x86_64 hosts (slower)
@@ -359,7 +359,7 @@ The build system automatically handles inter-package dependencies:
 
 1. Parses `depends=()` and `makedepends=()` from PKGBUILDs
 2. Builds in correct order
-3. Makes newly-built packages available via temporary `[omarchy-build]` repo
+3. Makes newly-built packages available via temporary `[eratosthenes-build]` repo
 
 Example: If `aether` depends on `hyprshade`, `hyprshade` is built first.
 
@@ -377,7 +377,7 @@ The repository includes GitHub workflows and systemd services for automated rele
 
 #### GitHub Workflows
 
-1. **sync-aur.yml** (Every 6 hours): Syncs AUR packages according to `.omarchy/package.json` and opens a PR when changes are found.
+1. **sync-aur.yml** (Every 6 hours): Syncs AUR packages according to `.eratosthenes/package.json` and opens a PR when changes are found.
 
 #### Systemd Services
 
@@ -400,15 +400,15 @@ State files are stored in `/root/.state/`:
 
 ```bash
 # Copy systemd units
-cp /root/omarchy-pkgs/systemd/*.service /root/omarchy-pkgs/systemd/*.timer /etc/systemd/system/
+cp /root/eratosthenes-pkgs/systemd/*.service /root/eratosthenes-pkgs/systemd/*.timer /etc/systemd/system/
 
 # Reload systemd
 systemctl daemon-reload
 
 # Enable and start timers
-systemctl enable --now omarchy-check-versions.timer
-systemctl enable --now omarchy-auto-release-edge.timer
-systemctl enable --now omarchy-auto-release-stable.timer
+systemctl enable --now eratosthenes-check-versions.timer
+systemctl enable --now eratosthenes-auto-release-edge.timer
+systemctl enable --now eratosthenes-auto-release-stable.timer
 
 # Create state directory
 mkdir -p /root/.state
@@ -418,15 +418,15 @@ mkdir -p /root/.state
 
 ```bash
 # Check timer status
-systemctl list-timers omarchy-*
+systemctl list-timers eratosthenes-*
 
 # Manual trigger
-systemctl start omarchy-check-versions.service
-systemctl start omarchy-auto-release-edge.service
-systemctl start omarchy-auto-release-stable.service
+systemctl start eratosthenes-check-versions.service
+systemctl start eratosthenes-auto-release-edge.service
+systemctl start eratosthenes-auto-release-stable.service
 
 # View logs
-journalctl -u omarchy-check-versions.service
-journalctl -u omarchy-auto-release-edge.service
-journalctl -u omarchy-auto-release-stable.service
+journalctl -u eratosthenes-check-versions.service
+journalctl -u eratosthenes-auto-release-edge.service
+journalctl -u eratosthenes-auto-release-stable.service
 ```

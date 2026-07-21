@@ -64,7 +64,7 @@ while [[ $# -gt 0 ]]; do
     echo "  --arch <arch>         Target architecture (x86_64 or aarch64, default: x86_64)"
     echo "  --mirror <mirror>     Mirror to use (edge or stable, default: edge)"
     echo "  --package <name>      Build only the specified package"
-    echo "  --sync-remote <path>  Rclone remote for sync (default: pkgs.omarchy.org:omarchy-pkgs)"
+    echo "  --sync-remote <path>  Rclone remote for sync (default: pkgs.trevorndlovu.com:eratosthenes-pkgs)"
     echo "  --skip-prod-check     Skip production environment check during sync
   --dry-run             Show build plan only; do not sign/promote/clean/update/sync"
     echo "  -h, --help            Show this help message"

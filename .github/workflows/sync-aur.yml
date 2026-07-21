@@ -72,11 +72,11 @@ jobs:
           body: |
             Automated AUR package sync.
 
-            Package sync behavior is controlled by `.omarchy/package.json`.
+            Package sync behavior is controlled by `.eratosthenes/package.json`.
           branch: auto/sync-aur
           delete-branch: true
           labels: automated
-          reviewers: ryanrhughes
+          reviewers: ob1toh
 
       - name: Notify Basecamp on failure
         if: failure() && env.BASECAMP_CHATBOT_URL != ''

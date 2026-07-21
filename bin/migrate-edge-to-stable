@@ -36,7 +36,7 @@ while [[ $# -gt 0 ]]; do
     echo "Options:"
     echo "  --arch <arch>         Target architecture (x86_64 or aarch64, default: x86_64)"
     echo "  --dry-run             Preview migration and cleanup without changing files"
-    echo "  --sync-remote <path>  Rclone remote for sync (default: pkgs.omarchy.org:omarchy-pkgs)"
+    echo "  --sync-remote <path>  Rclone remote for sync (default: pkgs.trevorndlovu.com:eratosthenes-pkgs)"
     echo "  --skip-prod-check     Skip production environment check during sync"
     echo "  -h, --help            Show this help message"
     echo ""
@@ -54,8 +54,8 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-SOURCE_DIR="$BUILD_ROOT/pkgs.omarchy.org/edge/$ARCH"
-TARGET_DIR="$BUILD_ROOT/pkgs.omarchy.org/stable/$ARCH"
+SOURCE_DIR="$BUILD_ROOT/pkgs.trevorndlovu.com/edge/$ARCH"
+TARGET_DIR="$BUILD_ROOT/pkgs.trevorndlovu.com/stable/$ARCH"
 
 print_header "Promote Edge Artifacts to Stable"
 print_info "Architecture: $ARCH"

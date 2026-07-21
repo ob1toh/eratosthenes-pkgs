@@ -17,7 +17,7 @@ Usage: $0 [PACKAGE...]
 
 Sync AUR-backed packages into pkgbuilds/<package>/.
 
-Package selection is driven by pkgbuilds/<package>/.omarchy/package.json:
+Package selection is driven by pkgbuilds/<package>/.eratosthenes/package.json:
   { "source": "aur" }                  # synced from matching AUR package name
   { "source": "aur", "aur": "yaru" }  # synced from different AUR package name
   { "source": "aur", "sync": false }  # AUR-origin, but not auto-synced
@@ -160,7 +160,7 @@ commit_synced_worktree() {
 set_upstream_commit() {
   local package_dir="$1"
   local commit="$2"
-  local metadata="$package_dir/.omarchy/package.json"
+  local metadata="$package_dir/.eratosthenes/package.json"
   local tmpfile
 
   tmpfile=$(mktemp)
@@ -168,9 +168,9 @@ set_upstream_commit() {
   mv "$tmpfile" "$metadata"
 }
 
-apply_omarchy_patches() {
+apply_eratosthenes_patches() {
   local package_dir="$1"
-  local patches_dir="$package_dir/.omarchy/patches"
+  local patches_dir="$package_dir/.eratosthenes/patches"
   local applied=false
 
   [[ -d "$patches_dir" ]] || return 1
@@ -187,7 +187,7 @@ apply_omarchy_patches() {
     return 1
   fi
 
-  print_info "Applying Omarchy patches for $(display_package_name "$package_dir")..."
+  print_info "Applying Eratosthenes patches for $(display_package_name "$package_dir")..."
   local patch_file
   for patch_file in "${patch_files[@]}"; do
     print_info "  $(basename "$patch_file")"
@@ -201,22 +201,22 @@ apply_omarchy_patches() {
   [[ "$applied" == true ]]
 }
 
-run_omarchy_post_sync_hook() {
+run_eratosthenes_post_sync_hook() {
   local package_dir="$1"
   local package="$2"
   local aur_package="$3"
   local aur_pkgrel="$4"
-  local hook="$package_dir/.omarchy/post-sync.sh"
+  local hook="$package_dir/.eratosthenes/post-sync.sh"
 
   [[ -f "$hook" ]] || return 1
 
-  print_info "Running Omarchy post-sync hook for $(display_package_name "$package_dir")..."
+  print_info "Running Eratosthenes post-sync hook for $(display_package_name "$package_dir")..."
   if ! (
     cd "$package_dir"
     PACKAGE_NAME="$package" \
       AUR_PACKAGE_NAME="$aur_package" \
       AUR_PKGREL="$aur_pkgrel" \
-      bash ".omarchy/post-sync.sh"
+      bash ".eratosthenes/post-sync.sh"
   ); then
     print_error "Failed to run post-sync hook: $hook"
     return 2
@@ -231,7 +231,7 @@ apply_pkgrel_suffix_if_customized() {
 
   [[ -n "$aur_pkgrel" ]] || return 0
 
-  print_info "Applying Omarchy pkgrel suffix for $(display_package_name "$package_dir"): pkgrel=$aur_pkgrel.1"
+  print_info "Applying Eratosthenes pkgrel suffix for $(display_package_name "$package_dir"): pkgrel=$aur_pkgrel.1"
   set_pkgrel "$package_dir" "$aur_pkgrel.1"
 }
 
@@ -239,7 +239,7 @@ apply_pkgrel_override() {
   local package_dir="$1"
   local aur_pkgrel="$2"
   local previous_pkgver="$3"
-  local metadata="$package_dir/.omarchy/package.json"
+  local metadata="$package_dir/.eratosthenes/package.json"
   local pkgbuild="$package_dir/PKGBUILD"
 
   [[ -f "$metadata" ]] || return 1
@@ -275,14 +275,14 @@ apply_pkgrel_override() {
 sync_package() {
   local package="$1"
   local package_dir="$PKGBUILDS_DIR/$package"
-  local metadata="$package_dir/.omarchy/package.json"
+  local metadata="$package_dir/.eratosthenes/package.json"
 
   if [[ ! -f "$metadata" ]]; then
     if [[ "$SPECIFIC_MODE" == true ]]; then
-      print_error "Package $package is missing .omarchy/package.json"
+      print_error "Package $package is missing .eratosthenes/package.json"
       ((++FAILED))
     else
-      print_warning "Skipping $package: missing .omarchy/package.json"
+      print_warning "Skipping $package: missing .eratosthenes/package.json"
       ((++SKIPPED))
     fi
     return 0
@@ -327,12 +327,12 @@ sync_package() {
 
   rm -rf "$work_dir"
   copy_aur_contents "$aur_dir" "$work_dir"
-  rm -rf "$work_dir/.omarchy"
-  cp -a "$package_dir/.omarchy" "$work_dir/.omarchy"
+  rm -rf "$work_dir/.eratosthenes"
+  cp -a "$package_dir/.eratosthenes" "$work_dir/.eratosthenes"
 
   local customized=false
 
-  if apply_omarchy_patches "$work_dir"; then
+  if apply_eratosthenes_patches "$work_dir"; then
     customized=true
   else
     local patch_status=$?
@@ -342,7 +342,7 @@ sync_package() {
     fi
   fi
 
-  if run_omarchy_post_sync_hook "$work_dir" "$package" "$aur_package" "$aur_pkgrel"; then
+  if run_eratosthenes_post_sync_hook "$work_dir" "$package" "$aur_package" "$aur_pkgrel"; then
     customized=true
   else
     local hook_status=$?

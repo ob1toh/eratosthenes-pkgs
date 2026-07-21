@@ -1,9 +1,9 @@
-pkgname=omarchy-walker
+pkgname=eratosthenes-walker
 pkgver=1.0.0
 pkgrel=2
-pkgdesc='Meta package for walker with Elephant providers for Omarchy'
+pkgdesc='Meta package for walker with Elephant providers for Eratosthenes'
 arch=('x86_64' 'aarch64')
-url='https://omarchy.org'
+url='https://eratosthenes'
 license=('MIT')
 options=('!debug')
 depends=(
