@@ -2,15 +2,15 @@
 # Reference: https://wiki.archlinux.org/title/PKGBUILD
 
 ## options
-: "${_run_unit_tests:=false}" # if set to true; unit tests will be executed post build; useful in CI
+: "${_run_unit_tests:=false}"  # if set to true; unit tests will be executed post build; useful in CI
 : "${_support_headless_testing:=false}"
 : "${_use_cuda:=detect}" # nvenc
 
-: "${_commit:=86188d47a7463b0f73b35de18a628353adeaa20e}"
+: "${_commit:=cb72dffa3233c5815cd5ba88f09f049dd679ba75}"
 
 pkgname='sunshine'
-pkgver=2025.924.154138
-pkgrel=3
+pkgver=2026.906.222525
+pkgrel=1
 pkgdesc="Self-hosted game stream host for Moonlight"
 arch=('x86_64' 'aarch64')
 url=https://app.lizardbyte.dev/Sunshine
@@ -31,12 +31,15 @@ fi
 depends=(
   'avahi'
   'curl'
+  'gcc-libs'
+  'gtk3'
+  'hicolor-icon-theme'
   'libayatana-appindicator'
   'libcap'
   'libdrm'
   'libevdev'
   'libmfx'
-  'libnotify'
+  'libpipewire'
   'libpulse'
   'libva'
   'libx11'
@@ -48,7 +51,10 @@ depends=(
   'numactl'
   'openssl'
   'opus'
+  'qt6-base'
+  'qt6-svg'
   'udev'
+  'vulkan-icd-loader'
   'which'
 )
 
@@ -62,6 +68,13 @@ makedepends=(
   'make'
   'nodejs'
   'npm'
+  'python-jinja'  # required by the glad OpenGL/EGL loader generator
+  'shaderc'
+)
+
+checkdepends=(
+  'gcovr'
+  'imagemagick'
 )
 
 optdepends=(
@@ -106,12 +119,12 @@ fi
 
 prepare() {
     cd "$pkgname"
-    git submodule update --recursive --init
+    git submodule update --recursive --init --depth 1
 }
 
 build() {
     export BRANCH="master"
-    export BUILD_VERSION="2025.924.154138"
+    export BUILD_VERSION="2026.906.222525"
     export COMMIT="${_commit}"
 
     export CC="gcc${_gcc_env_suffix}"
@@ -129,7 +142,6 @@ build() {
       -D BUILD_DOCS=OFF
       -D BUILD_WERROR=ON
       -D CMAKE_INSTALL_PREFIX=/usr
-      -D SUNSHINE_COMPILE_OPTIONS="-Wno-uninitialized"
       -D SUNSHINE_EXECUTABLE_PATH=/usr/bin/sunshine
       -D SUNSHINE_ASSETS_DIR="share/sunshine"
       -D SUNSHINE_PUBLISHER_NAME='LizardByte'
@@ -144,10 +156,14 @@ build() {
       # therefore, set them manually to the expected values on Arch Linux
       if [ -z "${CUDA_PATH:-}" ] && pacman -Qi cuda &> /dev/null; then
         local _cuda_gcc_version
-        _cuda_gcc_version="$(LC_ALL=C pacman -Si cuda | grep -Pom1 '^Depends On\s*:.*\bgcc\K[0-9]+\b')"
+        _cuda_gcc_version="$(LC_ALL=C pacman -Si cuda | grep -Pom1 '^Depends On\s*:.*\bgcc\K[0-9]+\b' || true)"
 
         export CUDA_PATH=/opt/cuda
-        export NVCC_CCBIN="/usr/bin/g++-${_cuda_gcc_version}"
+        if [ -n "$_cuda_gcc_version" ]; then
+          export NVCC_CCBIN="/usr/bin/g++-${_cuda_gcc_version}"
+        else
+          export NVCC_CCBIN="/usr/bin/g++"
+        fi
       fi
     fi
 
@@ -155,30 +171,80 @@ build() {
       _cmake_options+=(-DBUILD_TESTS=OFF)
     fi
 
+    if [[ -z "${GITHUB_ACTIONS}" ]]; then
+	    _appstreamcli_arguments=(--no-net)
+    fi
+
     cmake "${_cmake_options[@]}"
 
-    appstreamcli validate "build/dev.lizardbyte.app.Sunshine.metainfo.xml"
+    appstreamcli validate "${_appstreamcli_arguments[@]}" "build/dev.lizardbyte.app.Sunshine.metainfo.xml"
     appstream-util validate "build/dev.lizardbyte.app.Sunshine.metainfo.xml"
     desktop-file-validate "build/dev.lizardbyte.app.Sunshine.desktop"
     desktop-file-validate "build/dev.lizardbyte.app.Sunshine.terminal.desktop"
 
-    make -C build
+    cmake --build build
 }
 
 check() {
-    cd "${srcdir}/build"
-    ./sunshine --version
-
     if [[ "${_run_unit_tests::1}" == "t" ]]; then
       export CC="gcc${_gcc_env_suffix}"
       export CXX="g++${_gcc_env_suffix}"
 
       cd "${srcdir}/build/tests"
-      ./test_sunshine --gtest_color=yes
+      # Do not silently upload misleading coverage if the gcov runtime cannot
+      # write profile data, such as when its version differs from the compiler.
+      GCOV_EXIT_AT_ERROR=1 ./test_sunshine --gtest_color=yes --gtest_output=xml:test_results.xml
+
+      # Generate coverage report
+      # Run gcovr from the build directory (where all .gcda/.gcno files are)
+      # This matches the pattern used in ci-linux.yml
+      cd "${srcdir}/build"
+
+      # Dynamically find the gcov executable from the selected compiler.
+      # This ensures we use the same gcov version that produced the .gcno files.
+      local gcov_path
+      local gcc_lib_dir
+
+      gcc_lib_dir="$("$CC" -print-libgcc-file-name)"
+      gcc_lib_dir="${gcc_lib_dir%/*}"
+      gcov_path="${gcc_lib_dir}/gcov"
+
+      if [ ! -x "$gcov_path" ]; then
+        gcov_path="$("$CC" -print-prog-name=gcov)"
+      fi
+
+      if [ -n "$gcov_path" ] && command -v "$gcov_path" > /dev/null 2>&1; then
+        gcov_path="$(command -v "$gcov_path")"
+      else
+        gcov_path="$(command -v "gcov${_gcc_env_suffix}" || command -v gcov || true)"
+      fi
+
+      if [ -z "$gcov_path" ]; then
+        echo "Unable to find gcov for ${CC}" >&2
+        return 1
+      fi
+
+      echo "Using gcov at: $gcov_path"
+
+      # Use the actual relative path to the source directory
+      # From ${srcdir}/build, the source is at ../${pkgname}/src
+      gcovr --gcov-executable "$gcov_path" . -r "../${pkgname}/src" \
+        --exclude-noncode-lines \
+        --exclude-throw-branches \
+        --exclude-unreachable-branches \
+        --verbose \
+        --xml-pretty \
+        -o coverage.xml
+
+      # Post-process the coverage XML to strip the absolute path and show only 'src'
+      sed -i "s|${srcdir}/${pkgname}/src|src|g" coverage.xml
     fi
+
+    cd "${srcdir}/build"
+    ./sunshine --version
 }
 
 package() {
     export MAKEFLAGS="${MAKEFLAGS:--j$(nproc)}"
-    make -C build install DESTDIR="$pkgdir"
+    DESTDIR="$pkgdir" cmake --install build
 }
