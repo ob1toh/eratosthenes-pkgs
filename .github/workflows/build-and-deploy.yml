@@ -15,12 +15,16 @@ on:
       mirror:
         description: 'Target mirror'
         type: choice
-        options: [edge, stable, rc]
+        options: [edge, stable]
         default: edge
       full_rebuild:
         description: 'Rebuild all packages (ignore skip-if-built logic)'
         type: boolean
         default: false
+
+concurrency:
+  group: package-publishing
+  cancel-in-progress: false
 
 jobs:
   build-and-deploy:
@@ -32,18 +36,30 @@ jobs:
 
       - name: Determine packages and mirror
         id: plan
+        env:
+          REQUESTED_MIRROR: ${{ inputs.mirror || 'edge' }}
+          REQUESTED_PACKAGES: ${{ inputs.packages }}
+          EVENT_NAME: ${{ github.event_name }}
+          FULL_REBUILD: ${{ inputs.full_rebuild }}
         run: |
-          MIRROR="${{ inputs.mirror || 'edge' }}"
+          MIRROR="$REQUESTED_MIRROR"
           echo "mirror=$MIRROR" >> "$GITHUB_OUTPUT"
 
-          if [[ -n "${{ inputs.packages }}" ]]; then
-            PKGS="${{ inputs.packages }}"
-          elif [[ "${{ github.event_name }}" == "schedule" || "${{ inputs.full_rebuild }}" == "true" ]]; then
+          if [[ -n "$REQUESTED_PACKAGES" ]]; then
+            PKGS="$REQUESTED_PACKAGES"
+          elif [[ "$EVENT_NAME" == "schedule" || "$FULL_REBUILD" == "true" ]]; then
             PKGS=$(ls pkgbuilds/ | tr '\n' ' ')
           else
-            PKGS=$(git diff --name-only HEAD~1 HEAD -- pkgbuilds/ | cut -d/ -f2 | sort -u | tr '\n' ' ')
+            PKGS=$(git diff --name-only HEAD~1 HEAD -- pkgbuilds/ | cut -d/ -f2 | sort -u | while read -r pkg; do
+              if [[ -f "pkgbuilds/$pkg/PKGBUILD" ]]; then printf '%s ' "$pkg"; fi
+            done)
           fi
 
+          [[ "$MIRROR" == edge || "$MIRROR" == stable ]] || exit 1
+          PKGS=$(printf '%s' "$PKGS" | tr '\n' ' ')
+          for pkg in $PKGS; do
+            [[ "$pkg" =~ ^[a-zA-Z0-9@._+-]+$ && -f "pkgbuilds/$pkg/PKGBUILD" ]] || exit 1
+          done
           echo "packages=$PKGS" >> "$GITHUB_OUTPUT"
           echo "==> Mirror: $MIRROR"
           echo "==> Packages: ${PKGS:-<none changed>}"
@@ -54,13 +70,34 @@ jobs:
           echo "No pkgbuilds changed — skipping build."
           exit 0
 
+      - name: Check deployment secrets
+        if: steps.plan.outputs.packages != ''
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+          GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+          R2_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
+          R2_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
+          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
+          R2_BUCKET: ${{ secrets.R2_BUCKET }}
+        run: |
+          missing=0
+          for name in GPG_PRIVATE_KEY GPG_PASSPHRASE R2_ACCESS_KEY_ID R2_SECRET_ACCESS_KEY R2_ENDPOINT R2_BUCKET; do
+            if [[ -z "${!name}" ]]; then
+              echo "::error::Missing Actions secret: $name"
+              missing=1
+            fi
+          done
+          exit "$missing"
+
       - name: Set up Docker Buildx
+        if: steps.plan.outputs.packages != ''
         uses: docker/setup-buildx-action@v3
 
       - name: Build Docker image
+        if: steps.plan.outputs.packages != ''
         uses: docker/build-push-action@v6
         with:
-          context: .
+          context: build
           file: build/Dockerfile
           load: true
           tags: eratosthenes-builder:latest
@@ -68,9 +105,11 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Build packages
+        if: steps.plan.outputs.packages != ''
         run: |
           MIRROR=${{ steps.plan.outputs.mirror }}
           mkdir -p build-output/$MIRROR/x86_64
+          sudo chown -R 1000:1000 build-output
 
           docker run --rm \
             -e MIRROR="$MIRROR" \
@@ -85,11 +124,12 @@ jobs:
             /build/build.sh
 
       - name: Sign packages
+        if: steps.plan.outputs.packages != ''
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
         run: |
-          docker run --rm \
+          docker run --rm --user 0 \
             -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
             -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
             -e MIRROR="${{ steps.plan.outputs.mirror }}" \
@@ -98,28 +138,20 @@ jobs:
             eratosthenes-builder:latest \
             /build/sign.sh
 
-      - name: Download existing DB from R2
+      - name: Download existing database
+        if: steps.plan.outputs.packages != ''
         env:
-          AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
-          AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
-          R2_ENDPOINT: ${{ secrets.R2_ENDPOINT }}
-          R2_BUCKET: ${{ secrets.R2_BUCKET }}
-        run: |
-          MIRROR=${{ steps.plan.outputs.mirror }}
-          OUTDIR="build-output/$MIRROR/x86_64"
-          # Pull existing DB so repo-add can do an incremental update.
-          # Failures are non-fatal — first deploy starts with a fresh DB.
-          aws s3 cp "s3://$R2_BUCKET/$MIRROR/x86_64/eratosthenes.db.tar.zst" "$OUTDIR/" \
-            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || true
-          aws s3 cp "s3://$R2_BUCKET/$MIRROR/x86_64/eratosthenes.files.tar.zst" "$OUTDIR/" \
-            --endpoint-url "$R2_ENDPOINT" 2>/dev/null || true
+          MIRROR: ${{ steps.plan.outputs.mirror }}
+        run: bash build/fetch-repo-db.sh "build-output/$MIRROR/x86_64"
 
       - name: Update repository database
+        if: steps.plan.outputs.packages != ''
         run: |
           MIRROR=${{ steps.plan.outputs.mirror }}
           OUTDIR="build-output/$MIRROR/x86_64"
 
-          docker run --rm \
+          docker run --rm --user 0 \
+            -e INCREMENTAL=true \
             -e MIRROR="$MIRROR" \
             -v "$PWD/$OUTDIR:/output/$MIRROR/x86_64" \
             -v "$PWD/build:/build:ro" \
@@ -127,6 +159,7 @@ jobs:
             /build/update-repo.sh
 
       - name: Sign repository database
+        if: steps.plan.outputs.packages != ''
         env:
           GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
           GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
@@ -135,13 +168,15 @@ jobs:
           OUTDIR="build-output/$MIRROR/x86_64"
 
           # Sign the db and files tarballs
-          docker run --rm \
+          docker run --rm --user 0 \
             -e GPG_PRIVATE_KEY="$GPG_PRIVATE_KEY" \
             -e GPG_PASSPHRASE="$GPG_PASSPHRASE" \
             -v "$PWD/$OUTDIR:/sign-target" \
-            eratosthenes-builder:latest bash -c '
+            eratosthenes-builder:latest bash -euc '
               echo "$GPG_PRIVATE_KEY" | gpg --batch --import 2>/dev/null
               KEY_ID=$(gpg --list-secret-keys --keyid-format LONG 2>/dev/null | grep "sec" | head -1 | awk "{print \$2}" | cut -d"/" -f2)
+              FINGERPRINT=$(gpg --with-colons --list-secret-keys "$KEY_ID" | awk -F: '"'"'/^fpr:/ {print $10; exit}'"'"')
+              test "$FINGERPRINT" = 34E532A43F4BBC4B10357ADB4B3EF8D3FFEA9BA3 || exit 1
               cd /sign-target
               for f in eratosthenes.db.tar.zst eratosthenes.files.tar.zst; do
                 [[ -f "$f" ]] || continue
@@ -151,7 +186,22 @@ jobs:
               done
             '
 
+      - name: Prepare public repository files
+        if: steps.plan.outputs.packages != ''
+        env:
+          MIRROR: ${{ steps.plan.outputs.mirror }}
+        run: |
+          OUTDIR="build-output/$MIRROR/x86_64"
+          sudo cp pkgbuilds/eratosthenes-keyring/eratosthenes.gpg "$OUTDIR/"
+          for kind in db files; do
+            sudo rm -f "$OUTDIR/eratosthenes.$kind" "$OUTDIR/eratosthenes.$kind.sig"
+            sudo cp "$OUTDIR/eratosthenes.$kind.tar.zst" "$OUTDIR/eratosthenes.$kind"
+            sudo cp "$OUTDIR/eratosthenes.$kind.tar.zst.sig" "$OUTDIR/eratosthenes.$kind.sig"
+          done
+          sudo rm -f "$OUTDIR"/eratosthenes-build.*
+
       - name: Upload to R2
+        if: steps.plan.outputs.packages != ''
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.R2_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.R2_SECRET_ACCESS_KEY }}
@@ -161,7 +211,11 @@ jobs:
           MIRROR=${{ steps.plan.outputs.mirror }}
           aws s3 sync "build-output/$MIRROR/x86_64/" \
             "s3://$R2_BUCKET/$MIRROR/x86_64/" \
-            --endpoint-url "$R2_ENDPOINT"
+            --endpoint-url "$R2_ENDPOINT" \
+            --exclude "eratosthenes.db*" --exclude "eratosthenes.files*"
+          aws s3 sync "build-output/$MIRROR/x86_64/" \
+            "s3://$R2_BUCKET/$MIRROR/x86_64/" --endpoint-url "$R2_ENDPOINT" \
+            --exclude "*" --include "eratosthenes.db*" --include "eratosthenes.files*"
           echo "==> Deployed to $MIRROR channel"
 
       - name: Notify on failure

@@ -1,11 +1,11 @@
 # Maintainer: Eratosthenes <pkgs@eratosthenes>
 
 pkgname=eratosthenes-keyring
-pkgver=20251027
+pkgver=20260915
 pkgrel=1
 pkgdesc="Eratosthenes keyring"
 arch=(any)
-url="https://eratosthenes"
+url="https://github.com/ob1toh/eratosthenes-pkgs"
 license=('GPL-3.0-or-later')
 install=$pkgname.install
 source=("eratosthenes.gpg"
@@ -13,10 +13,10 @@ source=("eratosthenes.gpg"
         "eratosthenes-trusted"
         "$install")
 
-sha512sums=('f9455c60f30984d73ddebecf55a1b6dcb3afba84638c5d78130494bb828f53cfa19d393c27e43514d5847b37dcd0a5601ba39b213c2185ff153001b7221c9c8c'
+sha512sums=('c22201dfc3c525efb6bb2fc1e0050d15eade2e461269bf7aa967093fe0c7c427ff0397bf4d419b3f3ac775dbe6365de09d18980dcbac529a058293c10cc128fe'
             'cf83e1357eefb8bdf1542850d66d8007d620e4050b5715dc83f4a921d36ce9ce47d0d13c5d85f2b0ff8318d2877eec2f63b931bd47417a81a538327af927da3e'
-            '39767d13b783903d97f68e23100982c645356c7f7dbd9625ae41f4fa217c937f09e0f5dd8e0741f0950f2d9418a160dbce7563e1f4a4599d545e38f986fd8fb9'
-            'b684c496b6866dfea05595965727709ef63b9abe6a89276b89f0dba0271112a0184a934884a6d53d1c5f4d6a01ac36c6d296ce475f5c7d10a11ee397e2926194')
+            '9ad700128b50b04ae13a0982813b162ceb002eae19f2afb9fd42701f621d37c51629bf95efe45183017e493d165931bf778ebd9b1994407f422ffb2cf363ec9b'
+            '2e7fb610ae48933b1d18bb6f22d590b4ef90012b5340adcd5487379965588d83b757b8eb582f9eab58adfe8424b7fa099080753fd8ecf6196668ea0eaef80d59')
 
 package() {
     install -D -m0644 -t "${pkgdir}"/usr/share/pacman/keyrings/ 'eratosthenes'{.gpg,-trusted,-revoked}

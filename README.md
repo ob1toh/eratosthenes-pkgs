@@ -1,5 +1,7 @@
 # Eratosthenes Package Repository
 
+For the current rename and rollout, see [MIGRATION.md](MIGRATION.md).
+
 Build system for the Eratosthenes Package Repository. Builds PKGBUILDs from local sources and AUR, signs them, and syncs to production.
 
 **Multi-Architecture**: Supports both x86_64 and aarch64 (ARM64).

@@ -103,15 +103,8 @@ RUN ln -sf /usr/lib/os-release /etc/os-release && \
         pacman-key --populate archlinux; \
     fi
 
-# Setup Eratosthenes keyring manually before adding repo (avoids keyserver trust issues)
-# Note: Repository is removed at the end since build scripts add it dynamically
-RUN pacman-key --recv-keys 40DFB630FF42BCFFB047046CF0134EE680CAC571 --keyserver keys.openpgp.org && \
-    pacman-key --lsign-key 40DFB630FF42BCFFB047046CF0134EE680CAC571 && \
-    printf '\n[eratosthenes]\nSigLevel = Optional\nServer = https://pkgs.trevorndlovu.com/$arch\n' >> /etc/pacman.conf && \
-    pacman -Sy --noconfirm && \
-    pacman -S --noconfirm eratosthenes-keyring && \
-    pacman-key --populate eratosthenes && \
-    sed -i '/^\[eratosthenes\]/,/^$/d' /etc/pacman.conf
+# The builder bootstraps from Arch repositories. The distribution keyring is
+# built locally, so creating the image does not require a published repository.
 
 RUN pacman -Syu --noconfirm && \
     pacman -S --noconfirm \
